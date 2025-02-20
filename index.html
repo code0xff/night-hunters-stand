@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Night Hunter’s Stand</title> <!-- Changed to Night Hunter’s Stand -->
+    <style>
+        canvas {
+            border: 1px solid black;
+            background: #222;
+        }
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background: #111;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas" width="800" height="600"></canvas>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // Player (Van Helsing) - 32x32 SVG
+        const playerSVG = `
+            <svg width="32" height="32" xmlns="http://www.w3.org/2000/svg">
+                <rect x="8" y="4" width="16" height="4" fill="#8B4513"/>
+                <rect x="8" y="8" width="16" height="16" fill="#8B4513"/>
+                <rect x="12" y="8" width="8" height="4" fill="#FFDAB9"/>
+                <rect x="24" y="12" width="8" height="4" fill="#555"/>
+            </svg>
+        `;
+        const playerImage = new Image();
+        playerImage.src = 'data:image/svg+xml;base64,' + btoa(playerSVG);
+
+        // Zombie - 32x32 SVG
+        const zombieSVG = `
+            <svg width="32" height="32" xmlns="http://www.w3.org/2000/svg">
+                <rect x="8" y="4" width="16" height="24" fill="#228B22"/>
+                <rect x="12" y="8" width="4" height="4" fill="#FFF"/>
+                <rect x="20" y="8" width="4" height="4" fill="#FFF"/>
+            </svg>
+        `;
+        const zombieImage = new Image();
+        zombieImage.src = 'data:image/svg+xml;base64,' + btoa(zombieSVG);
+
+        // Skeleton - 32x32 SVG
+        const skeletonSVG = `
+            <svg width="32" height="32" xmlns="http://www.w3.org/2000/svg">
+                <rect x="14" y="4" width="4" height="24" fill="#FFF"/>
+                <rect x="10" y="12" width="12" height="4" fill="#FFF"/>
+                <rect x="12" y="4" width="8" height="8" fill="#DDD"/>
+            </svg>
+        `;
+        const skeletonImage = new Image();
+        skeletonImage.src = 'data:image/svg+xml;base64,' + btoa(skeletonSVG);
+
+        // Werewolf - 32x32 SVG
+        const werewolfSVG = `
+            <svg width="32" height="32" xmlns="http://www.w3.org/2000/svg">
+                <rect x="8" y="4" width="16" height="24" fill="#555"/>
+                <rect x="8" y="0" width="4" height="4" fill="#555"/>
+                <rect x="20" y="0" width="4" height="4" fill="#555"/>
+                <rect x="12" y="8" width="4" height="4" fill="#FFD700"/>
+            </svg>
+        `;
+        const werewolfImage = new Image();
+        werewolfImage.src = 'data:image/svg+xml;base64,' + btoa(werewolfSVG);
+
+        // Ghost - 32x32 SVG
+        const ghostSVG = `
+            <svg width="32" height="32" xmlns="http://www.w3.org/2000/svg">
+                <rect x="8" y="4" width="16" height="24" fill="#FFF" opacity="0.7"/>
+                <rect x="12" y="8" width="4" height="4" fill="#000"/>
+                <rect x="20" y="8" width="4" height="4" fill="#000"/>
+            </svg>
+        `;
+        const ghostImage = new Image();
+        ghostImage.src = 'data:image/svg+xml;base64,' + btoa(ghostSVG);
+
+        // Vampire - 32x32 SVG
+        const vampireSVG = `
+            <svg width="32" height="32" xmlns="http://www.w3.org/2000/svg">
+                <rect x="4" y="4" width="24" height="24" fill="#800000"/>
+                <rect x="12" y="4" width="8" height="8" fill="#F0E68C"/>
+                <rect x="14" y="12" width="2" height="4" fill="#FFF"/>
+                <rect x="18" y="12" width="2" height="4" fill="#FFF"/>
+            </svg>
+        `;
+        const vampireImage = new Image();
+        vampireImage.src = 'data:image/svg+xml;base64,' + btoa(vampireSVG);
+
+        // Flat Arrow - 16x16 SVG (single shape)
+        const arrowSVG = `
+            <svg width="16" height="16" xmlns="http://www.w3.org/2000/svg">
+                <rect x="0" y="7" width="16" height="2" fill="#FFD700"/>
+            </svg>
+        `;
+        const arrowImage = new Image();
+        arrowImage.src = 'data:image/svg+xml;base64,' + btoa(arrowSVG);
+
+        // Player object
+        const player = {
+            x: canvas.width / 2,
+            y: canvas.height / 2,
+            width: 32,
+            height: 32,
+            speed: 3,
+            shootDelay: 500, // ms
+            lastShot: 0,
+            arrowsPerShot: 1
+        };
+
+        // Enemies array and types
+        const enemies = [];
+        const enemyTypes = {
+            zombie: { image: zombieImage, speed: 1, hp: 1, width: 32, height: 32 },
+            skeleton: { image: skeletonImage, speed: 1.2, hp: 3, width: 32, height: 32 },
+            werewolf: { image: werewolfImage, speed: 2, hp: 4, width: 32, height: 32 },
+            ghost: { image: ghostImage, speed: 2.5, hp: 2, width: 32, height: 32 },
+            vampire: { image: vampireImage, speed: 1.5, hp: 5, width: 32, height: 32 }
+        };
+
+        // Arrows array
+        const arrows = [];
+
+        // Game state
+        let spawnRate = 1000; // ms
+        let lastSpawn = 0;
+        let gameOver = false;
+        let gameWon = false;
+        let wave = 1;
+        let kills = { zombie: 0, skeleton: 0, werewolf: 0, ghost: 0, vampire: 0 };
+
+        // Keyboard controls
+        const keys = {};
+        window.addEventListener('keydown', (e) => keys[e.key] = true);
+        window.addEventListener('keyup', (e) => keys[e.key] = false);
+
+        // Main game loop
+        function gameLoop(timestamp) {
+            if (gameOver) {
+                ctx.fillStyle = 'red';
+                ctx.font = '40px Arial';
+                ctx.fillText('Game Over', canvas.width / 2 - 100, canvas.height / 2);
+                return;
+            }
+            if (gameWon) {
+                ctx.fillStyle = 'green';
+                ctx.font = '40px Arial';
+                ctx.fillText('Congratulations!', canvas.width / 2 - 140, canvas.height / 2);
+                return;
+            }
+
+            update(timestamp);
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+
+        function update(timestamp) {
+            // Player movement
+            if (keys['w'] && player.y > player.height / 2) player.y -= player.speed;
+            if (keys['s'] && player.y < canvas.height - player.height / 2) player.y += player.speed;
+            if (keys['a'] && player.x > player.width / 2) player.x -= player.speed;
+            if (keys['d'] && player.x < canvas.width - player.width / 2) player.x += player.speed;
+
+            // Automatic shooting in eight directions
+            if (timestamp - player.lastShot >= player.shootDelay) {
+                shoot(timestamp);
+            }
+
+            // Spawn enemies based on wave
+            if (timestamp - lastSpawn > spawnRate) {
+                spawnEnemy();
+                lastSpawn = timestamp;
+                spawnRate = Math.max(200, spawnRate * 0.98);
+            }
+
+            // Update enemies
+            enemies.forEach((enemy, index) => {
+                const dx = player.x - enemy.x;
+                const dy = player.y - enemy.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                enemy.x += (dx / distance) * enemy.speed;
+                enemy.y += (dy / distance) * enemy.speed;
+
+                // Collision with player
+                if (distance < (player.width / 2 + enemy.width / 2)) {
+                    gameOver = true;
+                }
+            });
+
+            // Update arrows
+            arrows.forEach((arrow, aIndex) => {
+                arrow.x += arrow.vx;
+                arrow.y += arrow.vy;
+
+                // Check collision with enemies
+                enemies.forEach((enemy, eIndex) => {
+                    const dist = Math.sqrt((arrow.x - enemy.x) ** 2 + (arrow.y - enemy.y) ** 2);
+                    if (dist < (enemy.width / 2 + 8)) {
+                        enemy.hp -= 1;
+                        arrows.splice(aIndex, 1);
+                        if (enemy.hp <= 0) {
+                            enemies.splice(eIndex, 1);
+                            kills[enemy.type]++;
+                            updateWave();
+                            updateBowgun();
+                        }
+                        return;
+                    }
+                });
+
+                // Remove arrows off-screen
+                if (arrow.x < 0 || arrow.x > canvas.width || arrow.y < 0 || arrow.y > canvas.height) {
+                    arrows.splice(aIndex, 1);
+                }
+            });
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw player
+            ctx.drawImage(playerImage, player.x - player.width / 2, player.y - player.height / 2, player.width, player.height);
+
+            // Draw enemies
+            enemies.forEach(enemy => {
+                ctx.drawImage(enemy.image, enemy.x - enemy.width / 2, enemy.y - enemy.height / 2, enemy.width, enemy.height);
+            });
+
+            // Draw flat arrows with rotation
+            arrows.forEach(arrow => {
+                ctx.save();
+                ctx.translate(arrow.x, arrow.y);
+                ctx.rotate(arrow.angle);
+                ctx.drawImage(arrowImage, -8, -8, 16, 16);
+                ctx.restore();
+            });
+
+            // Draw HUD
+            ctx.fillStyle = 'white';
+            ctx.font = '20px Arial';
+            ctx.fillText(`Wave: ${wave}`, 10, 30);
+            ctx.fillText(`Zombies: ${kills.zombie}/75`, 10, 60);
+            ctx.fillText(`Skeletons: ${kills.skeleton}/75`, 10, 90);
+            ctx.fillText(`Werewolves: ${kills.werewolf}/75`, 10, 120);
+            ctx.fillText(`Ghosts: ${kills.ghost}/75`, 10, 150);
+            ctx.fillText(`Vampires: ${kills.vampire}/75`, 10, 180);
+            ctx.fillText(`Arrows: ${player.arrowsPerShot}`, 10, 210);
+            ctx.fillText(`Shoot Delay: ${player.shootDelay}ms`, 10, 240);
+        }
+
+        function spawnEnemy() {
+            let type;
+            if (wave === 1) {
+                type = 'zombie';
+            } else if (wave === 2) {
+                type = Math.random() < 0.5 ? 'zombie' : 'skeleton';
+            } else if (wave === 3) {
+                const rand = Math.random();
+                type = rand < 0.33 ? 'zombie' : rand < 0.66 ? 'skeleton' : 'werewolf';
+            } else if (wave === 4) {
+                const rand = Math.random();
+                type = rand < 0.25 ? 'zombie' : rand < 0.5 ? 'skeleton' : rand < 0.75 ? 'werewolf' : 'ghost';
+            } else if (wave === 5) {
+                const rand = Math.random();
+                type = rand < 0.2 ? 'zombie' : rand < 0.4 ? 'skeleton' : rand < 0.6 ? 'werewolf' : rand < 0.8 ? 'ghost' : 'vampire';
+            }
+            const { image, speed, hp, width, height } = enemyTypes[type];
+            const side = Math.floor(Math.random() * 4);
+            let x, y;
+            if (side === 0) { x = Math.random() * canvas.width; y = -height / 2; }
+            else if (side === 1) { x = Math.random() * canvas.width; y = canvas.height + height / 2; }
+            else if (side === 2) { x = -width / 2; y = Math.random() * canvas.height; }
+            else { x = canvas.width + width / 2; y = Math.random() * canvas.height; }
+            enemies.push({ x, y, speed, hp, width, height, image, type });
+        }
+
+        function shoot(timestamp) {
+            player.lastShot = timestamp;
+            const speed = 5;
+            const diagonalSpeed = speed / Math.sqrt(2);
+            const directions = [
+                { vx: speed, vy: 0, angle: 0 },
+                { vx: -speed, vy: 0, angle: Math.PI },
+                { vx: 0, vy: -speed, angle: -Math.PI / 2 },
+                { vx: 0, vy: speed, angle: Math.PI / 2 },
+                { vx: diagonalSpeed, vy: -diagonalSpeed, angle: -Math.PI / 4 },
+                { vx: -diagonalSpeed, vy: -diagonalSpeed, angle: -3 * Math.PI / 4 },
+                { vx: diagonalSpeed, vy: diagonalSpeed, angle: Math.PI / 4 },
+                { vx: -diagonalSpeed, vy: diagonalSpeed, angle: 3 * Math.PI / 4 }
+            ];
+
+            directions.forEach(dir => {
+                for (let i = 0; i < player.arrowsPerShot; i++) {
+                    arrows.push({
+                        x: player.x,
+                        y: player.y,
+                        vx: dir.vx,
+                        vy: dir.vy,
+                        angle: dir.angle,
+                        image: arrowImage
+                    });
+                }
+            });
+        }
+
+        function updateWave() {
+            if (wave === 1 && kills.zombie >= 75) {
+                wave = 2;
+                spawnRate = 1000;
+            } else if (wave === 2 && kills.zombie >= 75 && kills.skeleton >= 75) {
+                wave = 3;
+                spawnRate = 1000;
+            } else if (wave === 3 && kills.zombie >= 75 && kills.skeleton >= 75 && kills.werewolf >= 75) {
+                wave = 4;
+                spawnRate = 1000;
+            } else if (wave === 4 && kills.zombie >= 75 && kills.skeleton >= 75 && kills.werewolf >= 75 && kills.ghost >= 75) {
+                wave = 5;
+                spawnRate = 1000;
+            } else if (wave === 5 && kills.zombie >= 75 && kills.skeleton >= 75 && kills.werewolf >= 75 && kills.ghost >= 75 && kills.vampire >= 75) {
+                gameWon = true;
+            }
+        }
+
+        function updateBowgun() {
+            const totalKills = kills.zombie + kills.skeleton + kills.werewolf + kills.ghost + kills.vampire;
+            if (totalKills % 50 === 0) {
+                player.shootDelay = Math.max(100, player.shootDelay - 50);
+            }
+            if (totalKills % 100 === 0) {
+                player.arrowsPerShot = Math.min(5, player.arrowsPerShot + 1);
+            }
+        }
+
+        // Start the game
+        requestAnimationFrame(gameLoop);
+    </script>
+</body>
+</html>
