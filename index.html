@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Night Hunter’s Stand</title> <!-- Changed to Night Hunter’s Stand -->
+    <title>Night Hunter’s Stand</title>
     <style>
         canvas {
             border: 1px solid black;
@@ -330,10 +330,10 @@
 
         function updateBowgun() {
             const totalKills = kills.zombie + kills.skeleton + kills.werewolf + kills.ghost + kills.vampire;
-            if (totalKills % 50 === 0) {
+            if (totalKills % 100 === 0) { // Changed from 50 to 100
                 player.shootDelay = Math.max(100, player.shootDelay - 50);
             }
-            if (totalKills % 100 === 0) {
+            if (totalKills % 150 === 0) { // Changed from 100 to 150
                 player.arrowsPerShot = Math.min(5, player.arrowsPerShot + 1);
             }
         }

@@ -30,8 +30,8 @@ Survive as long as you can, upgrading your bowgun’s firing rate and arrow coun
 - **Vampire**: Speed 1.5, HP 5 (the ultimate challenge).
 
 ### Bowgun Upgrades
-- **Shoot Delay**: Decreases by 50ms every 50 kills (from 500ms to a minimum of 100ms).
-- **Arrows Per Shot**: Increases by 1 every 100 kills (up to 5 arrows per direction).
+- **Shoot Delay**: Decreases by 50ms every 100 kills (from 500ms to a minimum of 100ms).
+- **Arrows Per Shot**: Increases by 1 every 150 kills (up to 5 arrows per direction).
 
 ## How to Run Locally
 1. Download the `index.html` file from this repository.
@@ -47,7 +47,7 @@ Survive as long as you can, upgrading your bowgun’s firing rate and arrow coun
 Feel free to fork this repository, tweak the game, and submit pull requests with improvements! Suggestions for new enemies, features, or balance changes are welcome.
 
 ## License
-This project is open-source and free to use under the [MIT License](LICENSE). (You can add a `LICENSE` file if you want to formalize this.)
+This project is open-source and free to use under the [MIT License](LICENSE).
 
 ## Acknowledgments
 - Thanks to Grok from xAI for coding assistance and brainstorming.
