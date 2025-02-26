@@ -18,8 +18,13 @@ In Night Hunter’s Stand, you face escalating waves of enemies:
 
 Survive as long as you can, upgrading your bowgun’s firing rate and arrow count as you rack up kills.
 
+## Screenshot
+Here’s a glimpse of the action in Night Hunter’s Stand:  
+![Gameplay Screenshot](Screenshot.png)
+
 ### Controls
-- **Move**: Use **WASD** keys to maneuver the hunter around the screen.
+- **Desktop**: Use **WASD** keys to move the hunter.
+- **Mobile**: Press and hold on the screen to move the hunter toward that point; release to stop.
 - **Shooting**: The bowgun fires automatically in 8 directions (no manual aiming required).
 
 ### Enemies
@@ -35,7 +40,7 @@ Survive as long as you can, upgrading your bowgun’s firing rate and arrow coun
 
 ## How to Run Locally
 1. Download the `index.html` file from this repository.
-2. Open it in a web browser (e.g., Chrome, Firefox).
+2. Open it in a web browser (e.g., Chrome, Firefox) on desktop or mobile.
 3. Start playing—no additional setup required!
 
 ## Development

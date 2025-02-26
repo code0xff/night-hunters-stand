@@ -2,11 +2,14 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Night Hunter’s Stand</title>
     <style>
         canvas {
             border: 1px solid black;
             background: #222;
+            max-width: 100%;
+            height: auto;
         }
         body {
             display: flex;
@@ -15,6 +18,7 @@
             height: 100vh;
             margin: 0;
             background: #111;
+            overflow: hidden;
         }
     </style>
 </head>
@@ -112,7 +116,10 @@
             speed: 3,
             shootDelay: 500, // ms
             lastShot: 0,
-            arrowsPerShot: 1
+            arrowsPerShot: 1,
+            targetX: null, // Target position for touch movement
+            targetY: null,
+            isMoving: false // Track if touch is held
         };
 
         // Enemies array and types
@@ -141,6 +148,48 @@
         window.addEventListener('keydown', (e) => keys[e.key] = true);
         window.addEventListener('keyup', (e) => keys[e.key] = false);
 
+        // Touch controls for mobile
+        canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            const touch = e.touches[0];
+            const rect = canvas.getBoundingClientRect();
+            player.targetX = touch.clientX - rect.left;
+            player.targetY = touch.clientY - rect.top;
+            player.isMoving = true;
+        });
+        canvas.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            const touch = e.touches[0];
+            const rect = canvas.getBoundingClientRect();
+            player.targetX = touch.clientX - rect.left;
+            player.targetY = touch.clientY - rect.top;
+        });
+        canvas.addEventListener('touchend', () => {
+            player.isMoving = false;
+            player.targetX = null;
+            player.targetY = null;
+        });
+
+        // Mouse controls for desktop (optional hold-to-move)
+        canvas.addEventListener('mousedown', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            player.targetX = e.clientX - rect.left;
+            player.targetY = e.clientY - rect.top;
+            player.isMoving = true;
+        });
+        canvas.addEventListener('mousemove', (e) => {
+            if (player.isMoving) {
+                const rect = canvas.getBoundingClientRect();
+                player.targetX = e.clientX - rect.left;
+                player.targetY = e.clientY - rect.top;
+            }
+        });
+        canvas.addEventListener('mouseup', () => {
+            player.isMoving = false;
+            player.targetX = null;
+            player.targetY = null;
+        });
+
         // Main game loop
         function gameLoop(timestamp) {
             if (gameOver) {
@@ -162,11 +211,25 @@
         }
 
         function update(timestamp) {
-            // Player movement
+            // Player movement (WASD for desktop)
             if (keys['w'] && player.y > player.height / 2) player.y -= player.speed;
             if (keys['s'] && player.y < canvas.height - player.height / 2) player.y += player.speed;
             if (keys['a'] && player.x > player.width / 2) player.x -= player.speed;
             if (keys['d'] && player.x < canvas.width - player.width / 2) player.x += player.speed;
+
+            // Player movement (Touch/Mouse hold-to-move)
+            if (player.isMoving && player.targetX !== null && player.targetY !== null) {
+                const dx = player.targetX - player.x;
+                const dy = player.targetY - player.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                if (distance > player.speed) {
+                    player.x += (dx / distance) * player.speed;
+                    player.y += (dy / distance) * player.speed;
+                }
+                // Keep player within bounds
+                player.x = Math.max(player.width / 2, Math.min(canvas.width - player.width / 2, player.x));
+                player.y = Math.max(player.height / 2, Math.min(canvas.height - player.height / 2, player.y));
+            }
 
             // Automatic shooting in eight directions
             if (timestamp - player.lastShot >= player.shootDelay) {
@@ -330,10 +393,10 @@
 
         function updateBowgun() {
             const totalKills = kills.zombie + kills.skeleton + kills.werewolf + kills.ghost + kills.vampire;
-            if (totalKills % 100 === 0) { // Changed from 50 to 100
+            if (totalKills % 100 === 0) {
                 player.shootDelay = Math.max(100, player.shootDelay - 50);
             }
-            if (totalKills % 150 === 0) { // Changed from 100 to 150
+            if (totalKills % 150 === 0) {
                 player.arrowsPerShot = Math.min(5, player.arrowsPerShot + 1);
             }
         }
