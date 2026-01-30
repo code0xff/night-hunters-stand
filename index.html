@@ -20,7 +20,7 @@
         }
         #game-wrapper {
             position: relative;
-            width: min(90vw, 960px);
+            width: min(92vw, 1280px);
             aspect-ratio: 16 / 9;
             max-height: 90vh;
         }
@@ -108,7 +108,7 @@
 </head>
 <body>
     <div id="game-wrapper">
-        <canvas id="gameCanvas" width="960" height="540"></canvas>
+        <canvas id="gameCanvas" width="1280" height="720"></canvas>
 
         <div id="start-screen" class="overlay">
             <h1>Night Hunter’s Stand</h1>
@@ -236,17 +236,323 @@
         ];
 
         const obstacles = [
-            { x: 200, y: 130, width: 120, height: 80, type: 'ruins' },
-            { x: 580, y: 100, width: 140, height: 90, type: 'monolith' },
-            { x: 130, y: 340, width: 160, height: 100, type: 'forest' },
-            { x: 520, y: 320, width: 180, height: 120, type: 'crypt' },
-            { x: 360, y: 210, width: 80, height: 140, type: 'altar' }
+            { x: 180, y: 120, width: 180, height: 120, type: 'ruins' },
+            { x: 840, y: 120, width: 210, height: 130, type: 'monolith' },
+            { x: 140, y: 460, width: 220, height: 140, type: 'forest' },
+            { x: 760, y: 460, width: 240, height: 150, type: 'crypt' },
+            { x: 520, y: 260, width: 120, height: 200, type: 'altar' }
         ];
+
+        const spriteScale = 3;
+        const sprites = {};
+
+        function createSprite(pattern, palette, scale = spriteScale) {
+            const rows = pattern.length;
+            const cols = pattern[0].length;
+            const spriteCanvas = document.createElement('canvas');
+            spriteCanvas.width = cols * scale;
+            spriteCanvas.height = rows * scale;
+            const spriteCtx = spriteCanvas.getContext('2d');
+            spriteCtx.imageSmoothingEnabled = false;
+
+            pattern.forEach((row, y) => {
+                row.split('').forEach((key, x) => {
+                    if (key === '.') return;
+                    spriteCtx.fillStyle = palette[key] || '#ffffff';
+                    spriteCtx.fillRect(x * scale, y * scale, scale, scale);
+                });
+            });
+
+            return spriteCanvas;
+        }
+
+        function createTexture(pattern, palette, scale = 2) {
+            const textureCanvas = createSprite(pattern, palette, scale);
+            return ctx.createPattern(textureCanvas, 'repeat');
+        }
+
+        function buildSprites() {
+            sprites.player = createSprite(
+                [
+                    '....bbbb....',
+                    '...bccccb...',
+                    '..bccccccb..',
+                    '..bcdedccb..',
+                    '..bccccccb..',
+                    '..bbccccbb..',
+                    '...bffffb...',
+                    '..bbffffbb..',
+                    '..bffggffb..',
+                    '..bffggffb..',
+                    '..bbffffbb..',
+                    '...b....b...',
+                    '..b......b..',
+                    '.b........b.',
+                    'b..........b',
+                    '............'
+                ],
+                {
+                    b: '#2b2d42',
+                    c: '#f5d0a6',
+                    d: '#d9a97a',
+                    e: '#2a9d8f',
+                    f: '#6d597a',
+                    g: '#f4a261'
+                }
+            );
+
+            sprites.enemies = {
+                slime: createSprite(
+                    [
+                        '....aaaa....',
+                        '..aabbbbaa..',
+                        '.abbbccbbba.',
+                        'abbcccccbba',
+                        'abccccccba.',
+                        'abccccccba.',
+                        '.abbbbbba..',
+                        '..aabbbbaa..',
+                        '....aaaa....',
+                        '............',
+                        '............',
+                        '............',
+                        '............',
+                        '............',
+                        '............',
+                        '............'
+                    ],
+                    { a: '#2d6a4f', b: '#52b788', c: '#b7e4c7' }
+                ),
+                goblin: createSprite(
+                    [
+                        '....aaaa....',
+                        '...abbbba...',
+                        '..abccccba..',
+                        '..abdedcba..',
+                        '..abbccbb...',
+                        '...aeeea....',
+                        '..aeeffeea..',
+                        '..aefggfea..',
+                        '..aefggfea..',
+                        '..aeeffeea..',
+                        '..aaeeeeaa..',
+                        '....aaaa....',
+                        '....a..a....',
+                        '...a....a...',
+                        '............',
+                        '............'
+                    ],
+                    { a: '#1b4332', b: '#40916c', c: '#74c69d', d: '#fefae0', e: '#2d6a4f', f: '#b7e4c7', g: '#f4a261' }
+                ),
+                skeleton: createSprite(
+                    [
+                        '....aaaa....',
+                        '...abbbba...',
+                        '..abccccba..',
+                        '..abdedcba..',
+                        '..abbccbb...',
+                        '..aaeeeeaa..',
+                        '..aefggfea..',
+                        '..aefggfea..',
+                        '..aaeeeeaa..',
+                        '...aeeeea...',
+                        '..aeeeeeea..',
+                        '..aee..eea..',
+                        '..aa....aa..',
+                        '...a....a...',
+                        '............',
+                        '............'
+                    ],
+                    { a: '#f8f9fa', b: '#ced4da', c: '#adb5bd', d: '#343a40', e: '#dee2e6', f: '#e9ecef', g: '#495057' }
+                ),
+                harpy: createSprite(
+                    [
+                        '....aaaa....',
+                        '...abbbba...',
+                        '..abccccba..',
+                        '..abdddcba..',
+                        '..abcccbba..',
+                        '..aeeffeea..',
+                        '.aefgggfea.',
+                        'aefgggggfea',
+                        'aefgggggfea',
+                        '.aefgggfea.',
+                        '..aeeffeea..',
+                        '..aaeeeeaa..',
+                        '..a..aa..a..',
+                        '.a........a.',
+                        '............',
+                        '............'
+                    ],
+                    { a: '#4a4e69', b: '#9a8c98', c: '#c9ada7', d: '#f2e9e4', e: '#22223b', f: '#fcbf49', g: '#e76f51' }
+                ),
+                wraith: createSprite(
+                    [
+                        '....aaaa....',
+                        '...abbbba...',
+                        '..abccccba..',
+                        '..abdddcba..',
+                        '..abcccbba..',
+                        '..aeeffeea..',
+                        '.aefgggfea.',
+                        'aefgghhgfea',
+                        'aefgghhgfea',
+                        '.aefgggfea.',
+                        '..aeeffeea..',
+                        '..aaeeeeaa..',
+                        '..a..aa..a..',
+                        '.a........a.',
+                        '............',
+                        '............'
+                    ],
+                    { a: '#2d1e2f', b: '#4a306d', c: '#6c4a8a', d: '#e0aaff', e: '#3c096c', f: '#9d4edd', g: '#c77dff', h: '#f72585' }
+                ),
+                ogre: createSprite(
+                    [
+                        '....aaaa....',
+                        '...abbbba...',
+                        '..abccccba..',
+                        '..abdddcba..',
+                        '..abcccbba..',
+                        '..aeeffeea..',
+                        '..aefggfea..',
+                        '.aefgggfea..',
+                        '.aefgggfea..',
+                        '..aefggfea..',
+                        '..aeeffeea..',
+                        '..aaeeeeaa..',
+                        '..a..aa..a..',
+                        '.a........a.',
+                        '............',
+                        '............'
+                    ],
+                    { a: '#3b4d61', b: '#5b6d7c', c: '#8b9eb7', d: '#cdd7e1', e: '#2b2d42', f: '#6c757d', g: '#adb5bd' }
+                ),
+                vampire: createSprite(
+                    [
+                        '....aaaa....',
+                        '...abbbba...',
+                        '..abccccba..',
+                        '..abdedcba..',
+                        '..abbccbb...',
+                        '..aeeffeea..',
+                        '..aefggfea..',
+                        '..aefggfea..',
+                        '..aefhhfea..',
+                        '..aefhhfea..',
+                        '..aeeffeea..',
+                        '..aaeeeeaa..',
+                        '..a..aa..a..',
+                        '.a........a.',
+                        '............',
+                        '............'
+                    ],
+                    { a: '#2b2d42', b: '#8d99ae', c: '#edf2f4', d: '#d90429', e: '#2f1b25', f: '#f2c6b6', g: '#b5838d', h: '#ff4d6d' }
+                ),
+                lich: createSprite(
+                    [
+                        '....aaaa....',
+                        '...abbbba...',
+                        '..abccccba..',
+                        '..abdddcba..',
+                        '..abcccbba..',
+                        '..aeeffeea..',
+                        '..aefggfea..',
+                        '..aefhhfea..',
+                        '..aefhhfea..',
+                        '..aefggfea..',
+                        '..aeeffeea..',
+                        '..aaeeeeaa..',
+                        '..a..aa..a..',
+                        '.a........a.',
+                        '............',
+                        '............'
+                    ],
+                    { a: '#1b263b', b: '#415a77', c: '#778da9', d: '#e0e1dd', e: '#0d1b2a', f: '#f4f1de', g: '#9a8c98', h: '#4cc9f0' }
+                ),
+                dragon: createSprite(
+                    [
+                        '....aaaa....',
+                        '...abbbba...',
+                        '..abccccba..',
+                        '..abdddcba..',
+                        '..abcccbba..',
+                        '..aeeffeea..',
+                        '.aefgggfea.',
+                        'aefgghhgfea',
+                        'aefgghhgfea',
+                        '.aefgggfea.',
+                        '..aeeffeea..',
+                        '..aaeeeeaa..',
+                        '..a..aa..a..',
+                        '.a........a.',
+                        '............',
+                        '............'
+                    ],
+                    { a: '#2b1d0e', b: '#7f5539', c: '#b08968', d: '#f2d0a9', e: '#3a1f04', f: '#ff8c42', g: '#ffb703', h: '#ff4d6d' }
+                )
+            };
+
+            sprites.obstacles = {
+                ruins: createTexture(
+                    [
+                        'ababa.',
+                        'bacab',
+                        'ababa',
+                        'bcaab',
+                        'ababa'
+                    ],
+                    { a: '#3a3a52', b: '#4b4b68', c: '#2f2f44' }
+                ),
+                monolith: createTexture(
+                    [
+                        'aaabb',
+                        'abbbb',
+                        'abbba',
+                        'bbbaa',
+                        'aabbb'
+                    ],
+                    { a: '#2a2a3c', b: '#3f3f57' }
+                ),
+                forest: createTexture(
+                    [
+                        'ababa',
+                        'bacab',
+                        'ababa',
+                        'bacab',
+                        'ababa'
+                    ],
+                    { a: '#1c2b1f', b: '#2d5a35', c: '#3d6b3f' }
+                ),
+                crypt: createTexture(
+                    [
+                        'abbba',
+                        'bcbcb',
+                        'bbabb',
+                        'cbcbc',
+                        'abbba'
+                    ],
+                    { a: '#3f2d34', b: '#5c3d49', c: '#2f1b25' }
+                ),
+                altar: createTexture(
+                    [
+                        'ababa',
+                        'bacab',
+                        'ababa',
+                        'bacab',
+                        'ababa'
+                    ],
+                    { a: '#2f2f44', b: '#4b4b68', c: '#1f1f30' }
+                )
+            };
+        }
+
+        buildSprites();
 
         const player = {
             x: canvas.width / 2,
             y: canvas.height / 2,
-            radius: 16,
+            radius: 20,
             speed: 170,
             maxHp: 100,
             hp: 100,
@@ -266,15 +572,15 @@
         };
 
         const enemyTypes = {
-            slime: { hp: 6, speed: 45, damage: 8, radius: 14, xp: 8, color: '#6ee78c' },
-            goblin: { hp: 10, speed: 65, damage: 10, radius: 15, xp: 12, color: '#7ddf4f' },
-            skeleton: { hp: 16, speed: 60, damage: 14, radius: 16, xp: 16, color: '#d9d6c8' },
-            harpy: { hp: 14, speed: 90, damage: 12, radius: 14, xp: 18, color: '#f3b45b', ranged: true },
-            wraith: { hp: 22, speed: 70, damage: 18, radius: 17, xp: 24, color: '#c88bff' },
-            ogre: { hp: 40, speed: 40, damage: 24, radius: 24, xp: 40, color: '#6c7a89' },
-            vampire: { hp: 32, speed: 80, damage: 22, radius: 18, xp: 36, color: '#c05c7e', dash: true },
-            lich: { hp: 42, speed: 55, damage: 26, radius: 20, xp: 50, color: '#6f7cff', caster: true },
-            dragon: { hp: 80, speed: 50, damage: 35, radius: 28, xp: 90, boss: true, color: '#ff7b6b' }
+            slime: { hp: 6, speed: 45, damage: 8, radius: 18, xp: 8, sprite: sprites.enemies.slime },
+            goblin: { hp: 10, speed: 65, damage: 10, radius: 19, xp: 12, sprite: sprites.enemies.goblin },
+            skeleton: { hp: 16, speed: 60, damage: 14, radius: 19, xp: 16, sprite: sprites.enemies.skeleton },
+            harpy: { hp: 14, speed: 90, damage: 12, radius: 18, xp: 18, sprite: sprites.enemies.harpy, ranged: true },
+            wraith: { hp: 22, speed: 70, damage: 18, radius: 20, xp: 24, sprite: sprites.enemies.wraith },
+            ogre: { hp: 40, speed: 40, damage: 24, radius: 24, xp: 40, sprite: sprites.enemies.ogre },
+            vampire: { hp: 32, speed: 80, damage: 22, radius: 20, xp: 36, sprite: sprites.enemies.vampire, dash: true },
+            lich: { hp: 42, speed: 55, damage: 26, radius: 21, xp: 50, sprite: sprites.enemies.lich, caster: true },
+            dragon: { hp: 80, speed: 50, damage: 35, radius: 30, xp: 90, boss: true, sprite: sprites.enemies.dragon }
         };
 
         const enemies = [];
@@ -388,7 +694,7 @@
                 damage: template.damage,
                 radius: template.radius,
                 xp: template.xp,
-                color: template.color,
+                sprite: template.sprite,
                 ranged: template.ranged || false,
                 dash: template.dash || false,
                 caster: template.caster || false,
@@ -409,7 +715,7 @@
                 damage: template.damage,
                 radius: template.radius,
                 xp: template.xp,
-                color: template.color,
+                sprite: template.sprite,
                 boss: true,
                 attackTimer: 0
             });
@@ -883,17 +1189,7 @@
         function drawObstacles() {
             obstacles.forEach((obstacle) => {
                 ctx.save();
-                if (obstacle.type === 'ruins') {
-                    ctx.fillStyle = '#3a3a52';
-                } else if (obstacle.type === 'monolith') {
-                    ctx.fillStyle = '#2a2a3c';
-                } else if (obstacle.type === 'forest') {
-                    ctx.fillStyle = '#1c2b1f';
-                } else if (obstacle.type === 'crypt') {
-                    ctx.fillStyle = '#3f2d34';
-                } else {
-                    ctx.fillStyle = '#2f2f44';
-                }
+                ctx.fillStyle = sprites.obstacles[obstacle.type] || '#2f2f44';
                 ctx.fillRect(obstacle.x, obstacle.y, obstacle.width, obstacle.height);
                 ctx.strokeStyle = 'rgba(255,255,255,0.1)';
                 ctx.strokeRect(obstacle.x, obstacle.y, obstacle.width, obstacle.height);
@@ -904,32 +1200,22 @@
         function drawPlayer() {
             ctx.save();
             ctx.translate(player.x, player.y);
-            ctx.fillStyle = '#ffe9b0';
-            ctx.fillRect(-10, -14, 20, 28);
-            ctx.fillStyle = '#5b4636';
-            ctx.fillRect(-8, -14, 16, 6);
-            ctx.fillStyle = '#8b5cf6';
-            ctx.fillRect(-12, -4, 24, 12);
-            ctx.fillStyle = '#fbbf24';
-            ctx.fillRect(-3, -2, 6, 6);
+            const sprite = sprites.player;
+            const size = sprite.width;
+            ctx.shadowColor = 'rgba(0, 0, 0, 0.35)';
+            ctx.shadowBlur = 6;
+            ctx.drawImage(sprite, -size / 2, -size / 2, size, size);
             ctx.restore();
         }
 
         function drawEnemySprite(enemy) {
             ctx.save();
             ctx.translate(enemy.x, enemy.y);
-            ctx.fillStyle = enemy.color;
-            ctx.fillRect(-enemy.radius, -enemy.radius, enemy.radius * 2, enemy.radius * 2);
-            ctx.fillStyle = 'rgba(0,0,0,0.4)';
-            ctx.fillRect(-enemy.radius + 4, -enemy.radius + 4, enemy.radius * 2 - 8, enemy.radius * 2 - 8);
-            ctx.fillStyle = '#fff1f2';
-            ctx.fillRect(-4, -4, 3, 3);
-            ctx.fillRect(2, -4, 3, 3);
-            if (enemy.boss) {
-                ctx.strokeStyle = '#ffd166';
-                ctx.lineWidth = 2;
-                ctx.strokeRect(-enemy.radius, -enemy.radius, enemy.radius * 2, enemy.radius * 2);
-            }
+            const sprite = enemy.sprite;
+            const size = sprite.width * (enemy.boss ? 1.2 : 1);
+            ctx.shadowColor = enemy.boss ? 'rgba(255, 183, 3, 0.4)' : 'rgba(0, 0, 0, 0.3)';
+            ctx.shadowBlur = enemy.boss ? 10 : 6;
+            ctx.drawImage(sprite, -size / 2, -size / 2, size, size);
             ctx.restore();
         }
 
