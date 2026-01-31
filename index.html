@@ -121,7 +121,7 @@
                 <button id="start-button">Start Hunt</button>
                 <button id="how-button" class="secondary">Controls</button>
             </div>
-            <p class="badge">Retro pixel art is rendered procedurally to keep assets free and lightweight.</p>
+            <p class="badge">Using CC0 Project Cordon Sprites loaded remotely for characters and terrain.</p>
         </div>
 
         <div id="upgrade-screen" class="overlay hidden">
@@ -243,311 +243,57 @@
             { x: 520, y: 260, width: 120, height: 200, type: 'altar' }
         ];
 
-        const spriteScale = 3;
-        const sprites = {};
+        const assets = {
+            images: {},
+            patterns: {},
+            ready: false
+        };
 
-        function createSprite(pattern, palette, scale = spriteScale) {
-            const rows = pattern.length;
-            const cols = pattern[0].length;
-            const spriteCanvas = document.createElement('canvas');
-            spriteCanvas.width = cols * scale;
-            spriteCanvas.height = rows * scale;
-            const spriteCtx = spriteCanvas.getContext('2d');
-            spriteCtx.imageSmoothingEnabled = false;
+        const assetManifest = {
+            player: 'https://raw.githubusercontent.com/doficia/project-cordon-sprites/master/sprites/armors/army-helmet.png',
+            enemySlime: 'https://raw.githubusercontent.com/doficia/project-cordon-sprites/master/sprites/armors/alien-mask.png',
+            enemyGoblin: 'https://raw.githubusercontent.com/doficia/project-cordon-sprites/master/sprites/armors/frankensteinmask.png',
+            enemySkeleton: 'https://raw.githubusercontent.com/doficia/project-cordon-sprites/master/sprites/armors/ghost-mask.png',
+            enemyHarpy: 'https://raw.githubusercontent.com/doficia/project-cordon-sprites/master/sprites/armors/jack-o-lantern-mask.png',
+            enemyWraith: 'https://raw.githubusercontent.com/doficia/project-cordon-sprites/master/sprites/armors/demon-mask.png',
+            enemyOgre: 'https://raw.githubusercontent.com/doficia/project-cordon-sprites/master/sprites/armors/army-helmet.png',
+            enemyVampire: 'https://raw.githubusercontent.com/doficia/project-cordon-sprites/master/sprites/armors/jack-o-lantern-mask.png',
+            enemyLich: 'https://raw.githubusercontent.com/doficia/project-cordon-sprites/master/sprites/armors/ghost-mask.png',
+            enemyDragon: 'https://raw.githubusercontent.com/doficia/project-cordon-sprites/master/sprites/armors/demon-mask.png',
+            tileGrass: 'https://raw.githubusercontent.com/doficia/project-cordon-sprites/master/sprites/tiles/grass.png',
+            tileGrassDark: 'https://raw.githubusercontent.com/doficia/project-cordon-sprites/master/sprites/tiles/grass3.png',
+            tileGravel: 'https://raw.githubusercontent.com/doficia/project-cordon-sprites/master/sprites/tiles/gravel.png',
+            tileCement: 'https://raw.githubusercontent.com/doficia/project-cordon-sprites/master/sprites/tiles/cement.png',
+            treePine: 'https://raw.githubusercontent.com/doficia/project-cordon-sprites/master/sprites/trees/pine.png',
+            treeWillow: 'https://raw.githubusercontent.com/doficia/project-cordon-sprites/master/sprites/trees/willow.png',
+            xpFlask: 'https://raw.githubusercontent.com/doficia/project-cordon-sprites/master/sprites/consumables/flask.png'
+        };
 
-            pattern.forEach((row, y) => {
-                row.split('').forEach((key, x) => {
-                    if (key === '.') return;
-                    spriteCtx.fillStyle = palette[key] || '#ffffff';
-                    spriteCtx.fillRect(x * scale, y * scale, scale, scale);
-                });
+        function loadImage(key, src) {
+            return new Promise((resolve, reject) => {
+                const img = new Image();
+                img.onload = () => resolve({ key, img });
+                img.onerror = () => reject(new Error(`Failed to load ${src}`));
+                img.src = src;
+            });
+        }
+
+        async function loadAssets() {
+            const entries = Object.entries(assetManifest);
+            const results = await Promise.all(entries.map(([key, src]) => loadImage(key, src)));
+            results.forEach(({ key, img }) => {
+                assets.images[key] = img;
             });
 
-            return spriteCanvas;
-        }
-
-        function createTexture(pattern, palette, scale = 2) {
-            const textureCanvas = createSprite(pattern, palette, scale);
-            return ctx.createPattern(textureCanvas, 'repeat');
-        }
-
-        function buildSprites() {
-            sprites.player = createSprite(
-                [
-                    '....bbbb....',
-                    '...bccccb...',
-                    '..bccccccb..',
-                    '..bcdedccb..',
-                    '..bccccccb..',
-                    '..bbccccbb..',
-                    '...bffffb...',
-                    '..bbffffbb..',
-                    '..bffggffb..',
-                    '..bffggffb..',
-                    '..bbffffbb..',
-                    '...b....b...',
-                    '..b......b..',
-                    '.b........b.',
-                    'b..........b',
-                    '............'
-                ],
-                {
-                    b: '#2b2d42',
-                    c: '#f5d0a6',
-                    d: '#d9a97a',
-                    e: '#2a9d8f',
-                    f: '#6d597a',
-                    g: '#f4a261'
-                }
-            );
-
-            sprites.enemies = {
-                slime: createSprite(
-                    [
-                        '....aaaa....',
-                        '..aabbbbaa..',
-                        '.abbbccbbba.',
-                        'abbcccccbba',
-                        'abccccccba.',
-                        'abccccccba.',
-                        '.abbbbbba..',
-                        '..aabbbbaa..',
-                        '....aaaa....',
-                        '............',
-                        '............',
-                        '............',
-                        '............',
-                        '............',
-                        '............',
-                        '............'
-                    ],
-                    { a: '#2d6a4f', b: '#52b788', c: '#b7e4c7' }
-                ),
-                goblin: createSprite(
-                    [
-                        '....aaaa....',
-                        '...abbbba...',
-                        '..abccccba..',
-                        '..abdedcba..',
-                        '..abbccbb...',
-                        '...aeeea....',
-                        '..aeeffeea..',
-                        '..aefggfea..',
-                        '..aefggfea..',
-                        '..aeeffeea..',
-                        '..aaeeeeaa..',
-                        '....aaaa....',
-                        '....a..a....',
-                        '...a....a...',
-                        '............',
-                        '............'
-                    ],
-                    { a: '#1b4332', b: '#40916c', c: '#74c69d', d: '#fefae0', e: '#2d6a4f', f: '#b7e4c7', g: '#f4a261' }
-                ),
-                skeleton: createSprite(
-                    [
-                        '....aaaa....',
-                        '...abbbba...',
-                        '..abccccba..',
-                        '..abdedcba..',
-                        '..abbccbb...',
-                        '..aaeeeeaa..',
-                        '..aefggfea..',
-                        '..aefggfea..',
-                        '..aaeeeeaa..',
-                        '...aeeeea...',
-                        '..aeeeeeea..',
-                        '..aee..eea..',
-                        '..aa....aa..',
-                        '...a....a...',
-                        '............',
-                        '............'
-                    ],
-                    { a: '#f8f9fa', b: '#ced4da', c: '#adb5bd', d: '#343a40', e: '#dee2e6', f: '#e9ecef', g: '#495057' }
-                ),
-                harpy: createSprite(
-                    [
-                        '....aaaa....',
-                        '...abbbba...',
-                        '..abccccba..',
-                        '..abdddcba..',
-                        '..abcccbba..',
-                        '..aeeffeea..',
-                        '.aefgggfea.',
-                        'aefgggggfea',
-                        'aefgggggfea',
-                        '.aefgggfea.',
-                        '..aeeffeea..',
-                        '..aaeeeeaa..',
-                        '..a..aa..a..',
-                        '.a........a.',
-                        '............',
-                        '............'
-                    ],
-                    { a: '#4a4e69', b: '#9a8c98', c: '#c9ada7', d: '#f2e9e4', e: '#22223b', f: '#fcbf49', g: '#e76f51' }
-                ),
-                wraith: createSprite(
-                    [
-                        '....aaaa....',
-                        '...abbbba...',
-                        '..abccccba..',
-                        '..abdddcba..',
-                        '..abcccbba..',
-                        '..aeeffeea..',
-                        '.aefgggfea.',
-                        'aefgghhgfea',
-                        'aefgghhgfea',
-                        '.aefgggfea.',
-                        '..aeeffeea..',
-                        '..aaeeeeaa..',
-                        '..a..aa..a..',
-                        '.a........a.',
-                        '............',
-                        '............'
-                    ],
-                    { a: '#2d1e2f', b: '#4a306d', c: '#6c4a8a', d: '#e0aaff', e: '#3c096c', f: '#9d4edd', g: '#c77dff', h: '#f72585' }
-                ),
-                ogre: createSprite(
-                    [
-                        '....aaaa....',
-                        '...abbbba...',
-                        '..abccccba..',
-                        '..abdddcba..',
-                        '..abcccbba..',
-                        '..aeeffeea..',
-                        '..aefggfea..',
-                        '.aefgggfea..',
-                        '.aefgggfea..',
-                        '..aefggfea..',
-                        '..aeeffeea..',
-                        '..aaeeeeaa..',
-                        '..a..aa..a..',
-                        '.a........a.',
-                        '............',
-                        '............'
-                    ],
-                    { a: '#3b4d61', b: '#5b6d7c', c: '#8b9eb7', d: '#cdd7e1', e: '#2b2d42', f: '#6c757d', g: '#adb5bd' }
-                ),
-                vampire: createSprite(
-                    [
-                        '....aaaa....',
-                        '...abbbba...',
-                        '..abccccba..',
-                        '..abdedcba..',
-                        '..abbccbb...',
-                        '..aeeffeea..',
-                        '..aefggfea..',
-                        '..aefggfea..',
-                        '..aefhhfea..',
-                        '..aefhhfea..',
-                        '..aeeffeea..',
-                        '..aaeeeeaa..',
-                        '..a..aa..a..',
-                        '.a........a.',
-                        '............',
-                        '............'
-                    ],
-                    { a: '#2b2d42', b: '#8d99ae', c: '#edf2f4', d: '#d90429', e: '#2f1b25', f: '#f2c6b6', g: '#b5838d', h: '#ff4d6d' }
-                ),
-                lich: createSprite(
-                    [
-                        '....aaaa....',
-                        '...abbbba...',
-                        '..abccccba..',
-                        '..abdddcba..',
-                        '..abcccbba..',
-                        '..aeeffeea..',
-                        '..aefggfea..',
-                        '..aefhhfea..',
-                        '..aefhhfea..',
-                        '..aefggfea..',
-                        '..aeeffeea..',
-                        '..aaeeeeaa..',
-                        '..a..aa..a..',
-                        '.a........a.',
-                        '............',
-                        '............'
-                    ],
-                    { a: '#1b263b', b: '#415a77', c: '#778da9', d: '#e0e1dd', e: '#0d1b2a', f: '#f4f1de', g: '#9a8c98', h: '#4cc9f0' }
-                ),
-                dragon: createSprite(
-                    [
-                        '....aaaa....',
-                        '...abbbba...',
-                        '..abccccba..',
-                        '..abdddcba..',
-                        '..abcccbba..',
-                        '..aeeffeea..',
-                        '.aefgggfea.',
-                        'aefgghhgfea',
-                        'aefgghhgfea',
-                        '.aefgggfea.',
-                        '..aeeffeea..',
-                        '..aaeeeeaa..',
-                        '..a..aa..a..',
-                        '.a........a.',
-                        '............',
-                        '............'
-                    ],
-                    { a: '#2b1d0e', b: '#7f5539', c: '#b08968', d: '#f2d0a9', e: '#3a1f04', f: '#ff8c42', g: '#ffb703', h: '#ff4d6d' }
-                )
+            assets.patterns = {
+                ruins: ctx.createPattern(assets.images.tileCement, 'repeat'),
+                monolith: ctx.createPattern(assets.images.tileGravel, 'repeat'),
+                forest: ctx.createPattern(assets.images.tileGrass, 'repeat'),
+                crypt: ctx.createPattern(assets.images.tileGrassDark, 'repeat'),
+                altar: ctx.createPattern(assets.images.tileCement, 'repeat')
             };
-
-            sprites.obstacles = {
-                ruins: createTexture(
-                    [
-                        'ababa.',
-                        'bacab',
-                        'ababa',
-                        'bcaab',
-                        'ababa'
-                    ],
-                    { a: '#3a3a52', b: '#4b4b68', c: '#2f2f44' }
-                ),
-                monolith: createTexture(
-                    [
-                        'aaabb',
-                        'abbbb',
-                        'abbba',
-                        'bbbaa',
-                        'aabbb'
-                    ],
-                    { a: '#2a2a3c', b: '#3f3f57' }
-                ),
-                forest: createTexture(
-                    [
-                        'ababa',
-                        'bacab',
-                        'ababa',
-                        'bacab',
-                        'ababa'
-                    ],
-                    { a: '#1c2b1f', b: '#2d5a35', c: '#3d6b3f' }
-                ),
-                crypt: createTexture(
-                    [
-                        'abbba',
-                        'bcbcb',
-                        'bbabb',
-                        'cbcbc',
-                        'abbba'
-                    ],
-                    { a: '#3f2d34', b: '#5c3d49', c: '#2f1b25' }
-                ),
-                altar: createTexture(
-                    [
-                        'ababa',
-                        'bacab',
-                        'ababa',
-                        'bacab',
-                        'ababa'
-                    ],
-                    { a: '#2f2f44', b: '#4b4b68', c: '#1f1f30' }
-                )
-            };
+            assets.ready = true;
         }
-
-        buildSprites();
 
         const player = {
             x: canvas.width / 2,
@@ -572,15 +318,15 @@
         };
 
         const enemyTypes = {
-            slime: { hp: 6, speed: 45, damage: 8, radius: 18, xp: 8, sprite: sprites.enemies.slime },
-            goblin: { hp: 10, speed: 65, damage: 10, radius: 19, xp: 12, sprite: sprites.enemies.goblin },
-            skeleton: { hp: 16, speed: 60, damage: 14, radius: 19, xp: 16, sprite: sprites.enemies.skeleton },
-            harpy: { hp: 14, speed: 90, damage: 12, radius: 18, xp: 18, sprite: sprites.enemies.harpy, ranged: true },
-            wraith: { hp: 22, speed: 70, damage: 18, radius: 20, xp: 24, sprite: sprites.enemies.wraith },
-            ogre: { hp: 40, speed: 40, damage: 24, radius: 24, xp: 40, sprite: sprites.enemies.ogre },
-            vampire: { hp: 32, speed: 80, damage: 22, radius: 20, xp: 36, sprite: sprites.enemies.vampire, dash: true },
-            lich: { hp: 42, speed: 55, damage: 26, radius: 21, xp: 50, sprite: sprites.enemies.lich, caster: true },
-            dragon: { hp: 80, speed: 50, damage: 35, radius: 30, xp: 90, boss: true, sprite: sprites.enemies.dragon }
+            slime: { hp: 6, speed: 45, damage: 8, radius: 18, xp: 8, spriteKey: 'enemySlime' },
+            goblin: { hp: 10, speed: 65, damage: 10, radius: 19, xp: 12, spriteKey: 'enemyGoblin' },
+            skeleton: { hp: 16, speed: 60, damage: 14, radius: 19, xp: 16, spriteKey: 'enemySkeleton' },
+            harpy: { hp: 14, speed: 90, damage: 12, radius: 18, xp: 18, spriteKey: 'enemyHarpy', ranged: true },
+            wraith: { hp: 22, speed: 70, damage: 18, radius: 20, xp: 24, spriteKey: 'enemyWraith' },
+            ogre: { hp: 40, speed: 40, damage: 24, radius: 24, xp: 40, spriteKey: 'enemyOgre' },
+            vampire: { hp: 32, speed: 80, damage: 22, radius: 20, xp: 36, spriteKey: 'enemyVampire', dash: true },
+            lich: { hp: 42, speed: 55, damage: 26, radius: 21, xp: 50, spriteKey: 'enemyLich', caster: true },
+            dragon: { hp: 80, speed: 50, damage: 35, radius: 30, xp: 90, boss: true, spriteKey: 'enemyDragon' }
         };
 
         const enemies = [];
@@ -694,7 +440,7 @@
                 damage: template.damage,
                 radius: template.radius,
                 xp: template.xp,
-                sprite: template.sprite,
+                spriteKey: template.spriteKey,
                 ranged: template.ranged || false,
                 dash: template.dash || false,
                 caster: template.caster || false,
@@ -715,7 +461,7 @@
                 damage: template.damage,
                 radius: template.radius,
                 xp: template.xp,
-                sprite: template.sprite,
+                spriteKey: template.spriteKey,
                 boss: true,
                 attackTimer: 0
             });
@@ -1167,6 +913,14 @@
 
         function drawScene() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
+            if (!assets.ready) {
+                ctx.fillStyle = '#14141f';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = '#f8f6f0';
+                ctx.font = '24px "Trebuchet MS"';
+                ctx.fillText('Loading sprite pack...', canvas.width / 2 - 140, canvas.height / 2);
+                return;
+            }
             drawBackground();
             drawObstacles();
             drawXpOrbs();
@@ -1189,10 +943,23 @@
         function drawObstacles() {
             obstacles.forEach((obstacle) => {
                 ctx.save();
-                ctx.fillStyle = sprites.obstacles[obstacle.type] || '#2f2f44';
+                ctx.fillStyle = assets.patterns[obstacle.type] || '#2f2f44';
                 ctx.fillRect(obstacle.x, obstacle.y, obstacle.width, obstacle.height);
                 ctx.strokeStyle = 'rgba(255,255,255,0.1)';
                 ctx.strokeRect(obstacle.x, obstacle.y, obstacle.width, obstacle.height);
+                if (obstacle.type === 'forest') {
+                    const tree = assets.images.treePine || assets.images.treeWillow;
+                    if (tree) {
+                        const treeSize = Math.min(obstacle.width, obstacle.height) * 0.9;
+                        ctx.drawImage(
+                            tree,
+                            obstacle.x + (obstacle.width - treeSize) / 2,
+                            obstacle.y + (obstacle.height - treeSize) / 2,
+                            treeSize,
+                            treeSize
+                        );
+                    }
+                }
                 ctx.restore();
             });
         }
@@ -1200,22 +967,36 @@
         function drawPlayer() {
             ctx.save();
             ctx.translate(player.x, player.y);
-            const sprite = sprites.player;
-            const size = sprite.width;
+            const sprite = assets.images.player;
+            const size = player.radius * 2.4;
             ctx.shadowColor = 'rgba(0, 0, 0, 0.35)';
             ctx.shadowBlur = 6;
-            ctx.drawImage(sprite, -size / 2, -size / 2, size, size);
+            if (sprite) {
+                ctx.drawImage(sprite, -size / 2, -size / 2, size, size);
+            } else {
+                ctx.fillStyle = '#f5d0a6';
+                ctx.beginPath();
+                ctx.arc(0, 0, player.radius, 0, Math.PI * 2);
+                ctx.fill();
+            }
             ctx.restore();
         }
 
         function drawEnemySprite(enemy) {
             ctx.save();
             ctx.translate(enemy.x, enemy.y);
-            const sprite = enemy.sprite;
-            const size = sprite.width * (enemy.boss ? 1.2 : 1);
+            const sprite = assets.images[enemy.spriteKey];
+            const size = enemy.radius * 2.2 * (enemy.boss ? 1.2 : 1);
             ctx.shadowColor = enemy.boss ? 'rgba(255, 183, 3, 0.4)' : 'rgba(0, 0, 0, 0.3)';
             ctx.shadowBlur = enemy.boss ? 10 : 6;
-            ctx.drawImage(sprite, -size / 2, -size / 2, size, size);
+            if (sprite) {
+                ctx.drawImage(sprite, -size / 2, -size / 2, size, size);
+            } else {
+                ctx.fillStyle = '#cbd5f5';
+                ctx.beginPath();
+                ctx.arc(0, 0, enemy.radius, 0, Math.PI * 2);
+                ctx.fill();
+            }
             ctx.restore();
         }
 
@@ -1251,10 +1032,16 @@
             xpOrbs.forEach((orb) => {
                 ctx.save();
                 ctx.translate(orb.x, orb.y);
-                ctx.fillStyle = '#7bf1a8';
-                ctx.beginPath();
-                ctx.arc(0, 0, orb.radius, 0, Math.PI * 2);
-                ctx.fill();
+                const sprite = assets.images.xpFlask;
+                if (sprite) {
+                    const size = orb.radius * 2.2;
+                    ctx.drawImage(sprite, -size / 2, -size / 2, size, size);
+                } else {
+                    ctx.fillStyle = '#7bf1a8';
+                    ctx.beginPath();
+                    ctx.arc(0, 0, orb.radius, 0, Math.PI * 2);
+                    ctx.fill();
+                }
                 ctx.restore();
             });
         }
@@ -1321,6 +1108,9 @@
         }
 
         function startGame() {
+            if (!assets.ready) {
+                return;
+            }
             startScreen.classList.add('hidden');
             endScreen.classList.add('hidden');
             howScreen.classList.add('hidden');
@@ -1345,7 +1135,13 @@
             startScreen.classList.remove('hidden');
         });
 
-        drawScene();
+        loadAssets()
+            .then(drawScene)
+            .catch((error) => {
+                console.error(error);
+                assets.ready = true;
+                drawScene();
+            });
     </script>
 </body>
 </html>
